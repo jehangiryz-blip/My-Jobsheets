@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Master Pro - Premium UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
+        
+        .job-card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 20px; 
+            margin-bottom: 18px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); 
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        .job-card:active { transform: scale(0.99); }
+
+        .copy-toast {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 14px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .copy-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 1000; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(8px); }
+        .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 24px; padding: 28px; max-height: 90vh; overflow-y: auto; }
+        
+        .sync-anim { animation: rotate 1s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .status-badge { font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .printing-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 8px;
+            color: #10b981;
+        }
+
+        .todo-item-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #475569;
+        }
+        .todo-item-inline.done { color: #94a3b8; }
+        .todo-item-inline.done span { text-decoration: line-through; }
+        .todo-item-inline.done .check-icon { color: #10b981; }
+
+        .instruction-text {
+            color: #ef4444;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #fee2e2;
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .badge-pulse {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: 900;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid #0f172a;
+        }
+
+        .toggle-active {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            border-color: #2563eb !important;
+        }
+        
+        .dot-separator::after {
+            content: "•";
+            margin: 0 6px;
+            color: #cbd5e1;
+            font-weight: normal;
+        }
+        .dot-separator:last-child::after { content: ""; }
+
+        .customer-name {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            line-height: 1.2;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .customer-name:active { opacity: 0.7; }
+
+        .image-upload-box {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        .image-upload-box:hover { border-color: #3b82f6; background: #eff6ff; }
+        
+        #image-viewer-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .preview-img-container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 40px;
+        }
+        .preview-img-card {
+            background: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .preview-img-tag {
+            background: #3b82f6;
+            color: white;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            display: inline-block;
+        }
+        .preview-img-container img { width: 100%; height: auto; display: block; object-fit: contain; }
+        
+        .img-loading { font-size: 9px; font-weight: bold; color: #3b82f6; animation: pulse 1s infinite; }
+        
+        .prod-log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .stock-label {
+            font-size: 9px;
+            font-weight: 900;
+            color: #059669; 
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .spin-icon { animation: spin 3s linear infinite; display: inline-block; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        #toggle-complete-btn { cursor: help; }
+    </style>
+</head>
+<body class="client-mode">
+
+    <!-- Header -->
+    <div class="bg-slate-900 text-white p-5 sticky top-0 z-50 shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter uppercase">JOB<span class="text-blue-500">MASTER</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Production Management</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="toggle-complete-btn" title="Click: Toggle | Double Click: Admin" onclick="toggleCompleted()" ondblclick="openAccess()" class="bg-slate-800 p-2.5 rounded-xl active:scale-90 border border-slate-700 text-slate-400 transition-colors">
+                    <i id="eye-icon" class="fa-solid fa-eye-slash"></i>
+                </button>
+                
+                <div class="relative">
+                    <button id="sync-icon-btn" title="Sync Data" onclick="pullData()" class="bg-slate-800 p-2.5 rounded-xl active:scale-90 border border-slate-700">
+                        <i id="sync-icon" class="fa-solid fa-rotate text-blue-400"></i>
+                    </button>
+                    <div id="pending-badge" class="badge-pulse hidden">0</div>
+                </div>
+                
+                <button id="new-job-btn" onclick="openNewJob()" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-black text-xs shadow-lg shadow-blue-900/20 uppercase hidden">NEW JOB</button>
+            </div>
+        </div>
+        <div class="relative">
+            <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-500"></i>
+            <input type="text" id="search" oninput="renderJobs()" placeholder="Search No, Name, Size, GSM, Color..." class="w-full pl-12 p-3.5 rounded-xl text-slate-900 text-sm font-semibold outline-none focus:ring-4 ring-blue-500/20">
+        </div>
+    </div>
+
+    <!-- Job List -->
+    <div id="list" class="p-4 max-w-2xl mx-auto pb-24"></div>
+
+    <!-- Multi Image Viewer Modal -->
+    <div id="image-viewer-modal" onclick="this.style.display='none'">
+        <button class="fixed top-5 right-5 text-white text-3xl z-[2001] bg-black/50 w-10 h-10 rounded-full"><i class="fa-solid fa-xmark"></i></button>
+        <div class="preview-img-container mt-10" onclick="event.stopPropagation()">
+            <div id="sheet-preview-card" class="preview-img-card hidden">
+                <span class="preview-img-tag">Job Sheet</span>
+                <img id="full-sheet-img" src="" alt="Job Sheet">
+            </div>
+            <div id="artwork-preview-card" class="preview-img-card hidden">
+                <span class="preview-img-tag bg-purple-600">Artwork</span>
+                <img id="full-artwork-img" src="" alt="Artwork">
+            </div>
+            <p id="no-image-msg" class="text-white/50 text-xs mt-4 font-bold uppercase tracking-widest text-center hidden">No Images Saved for this Job</p>
+        </div>
+    </div>
+
+    <!-- Admin Access Modal -->
+    <div id="modal-access" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-xl text-slate-800">Admin Controls</h3>
+                <button onclick="closeModals()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Security Code</label>
+                    <input type="password" id="access-code" placeholder="Enter Secret Code" class="w-full bg-slate-50 border-slate-200 border-2 p-3 rounded-xl text-sm font-bold outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-1 gap-2 mt-2">
+                    <label class="flex items-center p-3 bg-slate-50 rounded-xl border-2 border-transparent cursor-pointer hover:border-blue-200 transition-all">
+                        <input type="checkbox" id="check-add" class="w-4 h-4 text-blue-600 mr-3 rounded" checked>
+                        <span class="text-sm font-bold text-slate-700">Add New Jobs</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-slate-50 rounded-xl border-2 border-transparent cursor-pointer hover:border-blue-200 transition-all">
+                        <input type="checkbox" id="check-todo" class="w-4 h-4 text-blue-600 mr-3 rounded" checked>
+                        <span class="text-sm font-bold text-slate-700">Delivery Schedule</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-slate-50 rounded-xl border-2 border-transparent cursor-pointer hover:border-blue-200 transition-all">
+                        <input type="checkbox" id="check-edit" class="w-4 h-4 text-blue-600 mr-3 rounded" checked>
+                        <span class="text-sm font-bold text-slate-700">Edit & Delete</span>
+                    </label>
+                    <label class="flex items-center p-3 bg-slate-50 rounded-xl border-2 border-transparent cursor-pointer hover:border-blue-200 transition-all">
+                        <input type="checkbox" id="check-prod" class="w-4 h-4 text-blue-600 mr-3 rounded" checked>
+                        <span class="text-sm font-bold text-slate-700">Production (+) Log</span>
+                    </label>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="lockAll()" class="flex-1 bg-slate-200 text-slate-600 py-4 rounded-xl font-black mt-2 active:scale-95 uppercase tracking-widest text-xs">LOCK</button>
+                    <button onclick="validateAccess()" class="flex-[2] bg-slate-900 text-white py-4 rounded-xl font-black mt-2 shadow-xl active:scale-95 uppercase tracking-widest text-xs">UNLOCK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div id="modal-form" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-xl text-slate-800" id="form-title">Job Details</h3>
+                <button onclick="closeModals()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="image-upload-box">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-camera"></i></div>
+                        <div>
+                            <p class="text-[8px] font-black text-slate-500 uppercase">Sheet</p>
+                            <input type="file" id="job-image-input" accept="image/*" onchange="handleImageUpload(event, 'sheet')" class="hidden">
+                            <button type="button" onclick="document.getElementById('job-image-input').click()" class="text-[10px] font-bold text-blue-600">Select</button>
+                            <div id="sheet-status" class="img-loading hidden">...</div>
+                        </div>
+                    </div>
+                    <button type="button" id="view-sheet-btn" onclick="viewJobImages(currentJobImageData, currentJobArtworkData)" class="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center hidden"><i class="fa-solid fa-eye text-xs"></i></button>
+                </div>
+                <div class="image-upload-box">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-palette"></i></div>
+                        <div>
+                            <p class="text-[8px] font-black text-slate-500 uppercase">Artwork</p>
+                            <input type="file" id="job-artwork-input" accept="image/*" onchange="handleImageUpload(event, 'artwork')" class="hidden">
+                            <button type="button" onclick="document.getElementById('job-artwork-input').click()" class="text-[10px] font-bold text-purple-600">Select</button>
+                            <div id="artwork-status" class="img-loading hidden">...</div>
+                        </div>
+                    </div>
+                    <button type="button" id="view-artwork-btn" onclick="viewJobImages(currentJobImageData, currentJobArtworkData)" class="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center hidden"><i class="fa-solid fa-eye text-xs"></i></button>
+                </div>
+            </div>
+
+            <form id="job-form" onsubmit="saveJob(event)" class="space-y-3">
+                <input type="hidden" id="edit-id">
+                <div class="p-3 bg-slate-50 rounded-2xl space-y-3 border border-slate-100">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase ml-1">Job Number</label>
+                            <input type="text" id="job-no" required class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none focus:border-blue-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase ml-1">Customer</label>
+                            <input type="text" id="customer" required class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl space-y-3 border border-slate-100">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase ml-1">Bags Qty</label>
+                            <input type="number" id="bags" required class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase ml-1">Stock (M)</label>
+                            <input type="number" id="stock" placeholder="0" class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase ml-1">Cut L (cm)</label>
+                            <input type="number" step="0.01" id="cut" required class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="text" id="size" placeholder="Size" class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        <input type="text" id="gsm" placeholder="GSM" class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        <input type="text" id="color" placeholder="Color" class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl space-y-3 border border-slate-100">
+                    <select id="printing" class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none">
+                        <option value="plain">Plain</option>
+                        <option value="single">Single Side Printing</option>
+                        <option value="both">Both Side Printing</option>
+                    </select>
+                    <textarea id="instructions" rows="2" placeholder="Instructions..." class="w-full bg-white border-slate-200 border-2 p-2 rounded-xl text-xs font-bold outline-none"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black mt-2 shadow-xl active:scale-95 uppercase tracking-widest text-sm">SAVE JOB</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Production Log Modal -->
+    <div id="modal-prod" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="font-black text-xl text-slate-800">Add Production</h3>
+                    <p id="prod-job-info" class="text-[10px] font-bold text-blue-600 uppercase"></p>
+                </div>
+                <button onclick="closeModals()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-2xl mb-6 border-2 border-slate-100">
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="date" id="mtr-date" class="w-full border-2 border-slate-200 p-2.5 rounded-xl text-xs font-bold outline-none">
+                    <input type="number" id="mtr-val" placeholder="Meters" class="w-full border-2 border-slate-200 p-2.5 rounded-xl text-xs font-bold outline-none">
+                </div>
+                <button onclick="saveProduction()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-black shadow-lg uppercase text-xs">SAVE ENTRY</button>
+            </div>
+            <div id="prod-total-display" class="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded mb-2 inline-block">Total: 0 Mtrs</div>
+            <div id="prod-history-list" class="space-y-1 max-h-[250px] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Delivery Schedule Modal -->
+    <div id="modal-schedule" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <div><h3 class="font-black text-xl text-slate-800">Delivery Schedule</h3><p id="schedule-job-no" class="text-[10px] font-bold text-blue-600 uppercase"></p></div>
+                <button onclick="closeModals()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-2xl mb-6 border-2 border-slate-100">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <input type="date" id="sch-date" class="w-full p-2 rounded-lg text-xs font-bold border-2 border-slate-200">
+                    <input type="number" id="sch-qty" placeholder="Mtrs" class="w-full p-2 rounded-lg text-xs font-bold border-2 border-slate-200">
+                </div>
+                <button onclick="addScheduleItem()" class="w-full bg-slate-900 text-white py-2 rounded-lg text-[10px] font-black uppercase">ADD ITEM</button>
+            </div>
+            <div id="schedule-list" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation -->
+    <div id="modal-delete" class="modal">
+        <div class="modal-content text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-trash-can"></i></div>
+            <h3 class="font-black text-xl mb-2">Delete Job?</h3>
+            <p class="text-slate-500 text-sm mb-6">Are you sure you want to remove this record?</p>
+            <div class="flex gap-3">
+                <button onclick="closeModals()" class="flex-1 bg-slate-100 py-3.5 rounded-xl font-bold text-slate-600">No</button>
+                <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3.5 rounded-xl font-bold text-white">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "https://script.google.com/macros/s/AKfycbzg4rBlW9CmN2Y8T89T2-j8Tfu5bjxvITHEkJ6-4lUfXODxsAmLVcmSCwW0J-2F8OHgjQ/exec";
+        const ADMIN_CODE = "CPL173"; 
+        
+        let jobs = JSON.parse(localStorage.getItem('job_data_v3') || '[]');
+        let showCompleted = false;
+        let activeId = null;
+        let currentJobImageData = ""; 
+        let currentJobArtworkData = ""; 
+        let unlockedFeatures = { add: false, todo: false, edit: false, prod: false };
+
+        window.onload = () => { renderJobs(); pullData(); };
+
+        function formatNum(num) { return Number(num || 0).toLocaleString('en-US'); }
+
+        // --- FULL CLIPBOARD COPY FUNCTION (ALL DETAILS) ---
+        function copyToClipboard(id, el) {
+            const j = jobs.find(x => x.ID == id);
+            if (!j) return;
+
+            const { done, req, pct } = calculateJobStatus(j);
+            const printingTypes = { 'plain': 'Plain', 'single': 'Single Side', 'both': 'Both Side' };
+            const printType = printingTypes[j.Printing] || 'Plain';
+
+            // 1. Production Logs Detail
+            let logs = []; try { logs = JSON.parse(j.ProductionLogs || '[]'); } catch(e) {}
+            const prodDetail = logs.length > 0 ? 
+                logs.map(l => `  • ${l.date}: ${l.meters} Mtrs`).join('\n') : "  No production entries yet.";
+
+            // 2. Schedule / To-Do Detail
+            let schedules = []; try { schedules = JSON.parse(j.Schedule || '[]'); } catch(e) {}
+            const schDetail = schedules.length > 0 ? 
+                schedules.map(s => `  • ${s.date}: ${formatNum(s.qty)} Mtrs [${s.done ? 'DONE' : 'PENDING'}]`).join('\n') : "  No schedule items.";
+
+            // --- MUNASIB FORMAT ---
+            const textToCopy = 
+`📦 JOB MASTER REPORT - #${j.JobNo}
+----------------------------------
+👤 CUSTOMER DETAILS:
+   Name: ${j.Customer}
+   Qty: ${formatNum(j.BagsQty)} Bags
+   Size: ${j.Size || 'N/A'}
+   GSM: ${j.GSM || 'N/A'}
+   Color: ${j.Color || 'N/A'}
+
+🛠️ SPECIFICATIONS:
+   Cut Length: ${j.CutLength} cm
+   Stock: ${formatNum(j.Stock || 0)} Mtrs
+   Printing: ${printType}
+
+📝 OTHER INSTRUCTIONS:
+   ${j.Instructions || "No special instructions."}
+
+📅 DELIVERY SCHEDULE (TO-DO):
+${schDetail}
+
+⚙️ PRODUCTION DETAILS:
+   Total Required: ${formatNum(req)} Mtrs
+   Total Produced: ${formatNum(Math.floor(done))} Mtrs
+   Progress: ${pct}%
+${prodDetail}
+
+----------------------------------
+Shared via Job Master Pro App`;
+
+            // Process Copy
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                // Feedback Toast
+                const toast = el.querySelector('.copy-toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 1800);
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function handleImageUpload(event, type) {
+            const file = event.target.files[0];
+            const statusLabel = document.getElementById(type === 'sheet' ? 'sheet-status' : 'artwork-status');
+            if (file) {
+                statusLabel.classList.remove('hidden');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width, height = img.height, maxDim = 800;
+                        if (width > height) { if (width > maxDim) { height *= maxDim / width; width = maxDim; } }
+                        else { if (height > maxDim) { width *= maxDim / height; height = maxDim; } }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                        if(type === 'sheet') {
+                            currentJobImageData = base64;
+                            document.getElementById('view-sheet-btn').classList.remove('hidden');
+                        } else {
+                            currentJobArtworkData = base64;
+                            document.getElementById('view-artwork-btn').classList.remove('hidden');
+                        }
+                        statusLabel.classList.add('hidden');
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function viewJobImages(sheetData, artworkData) {
+            const modal = document.getElementById('image-viewer-modal');
+            const sheetCard = document.getElementById('sheet-preview-card');
+            const artworkCard = document.getElementById('artwork-preview-card');
+            const noMsg = document.getElementById('no-image-msg');
+            sheetCard.classList.add('hidden'); artworkCard.classList.add('hidden'); noMsg.classList.add('hidden');
+            let hasAny = false;
+            if (sheetData && sheetData !== "null") { document.getElementById('full-sheet-img').src = sheetData; sheetCard.classList.remove('hidden'); hasAny = true; }
+            if (artworkData && artworkData !== "null") { document.getElementById('full-artwork-img').src = artworkData; artworkCard.classList.remove('hidden'); hasAny = true; }
+            if (!hasAny) noMsg.classList.remove('hidden');
+            modal.style.display = 'flex'; modal.scrollTo(0,0);
+        }
+
+        function openAccess() { document.getElementById('access-code').value = ''; document.getElementById('modal-access').style.display = 'flex'; }
+        function lockAll() { unlockedFeatures = { add: false, todo: false, edit: false, prod: false }; document.getElementById('new-job-btn').style.display = 'none'; closeModals(); renderJobs(); }
+        function validateAccess() {
+            if (document.getElementById('access-code').value === ADMIN_CODE) {
+                unlockedFeatures.add = document.getElementById('check-add').checked;
+                unlockedFeatures.todo = document.getElementById('check-todo').checked;
+                unlockedFeatures.edit = document.getElementById('check-edit').checked;
+                unlockedFeatures.prod = document.getElementById('check-prod').checked;
+                document.getElementById('new-job-btn').style.display = unlockedFeatures.add ? 'block' : 'none';
+                closeModals(); renderJobs();
+            } else { alert("Wrong Code!"); }
+        }
+
+        function toggleCompleted() {
+            showCompleted = !showCompleted;
+            const btn = document.getElementById('toggle-complete-btn'), icon = document.getElementById('eye-icon');
+            if (showCompleted) { btn.classList.add('toggle-active'); icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+            else { btn.classList.remove('toggle-active'); icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+            renderJobs();
+        }
+
+        function calculateJobStatus(j) {
+            let logs = []; try { logs = JSON.parse(j.ProductionLogs || '[]'); } catch(e) {}
+            const b = parseFloat(j.BagsQty) || 0, c = parseFloat(j.CutLength) || 0;
+            const req = Math.ceil(((b/100)*c)*1.05);
+            const done = logs.reduce((s,l) => s + (parseFloat(l.meters) || 0), 0);
+            const pct = Math.min(100, Math.floor((done/req)*100)) || 0;
+            return { done, req, pct, isComplete: pct >= 100 };
+        }
+
+        function renderJobs() {
+            const list = document.getElementById('list'), q = document.getElementById('search').value.toLowerCase();
+            list.innerHTML = '';
+            const filtered = jobs.filter(j => {
+                const status = calculateJobStatus(j);
+                const searchString = [j.JobNo, j.Customer, j.Size, j.GSM, j.Color].join(" ").toLowerCase();
+                if (!showCompleted && status.isComplete) return false;
+                return searchString.includes(q);
+            });
+
+            filtered.forEach(j => {
+                const { done, req, pct, isComplete } = calculateJobStatus(j);
+                const printingLabels = { 'plain': 'Plain', 'single': 'Single Side Printing', 'both': 'Both Side Printing' };
+                let schedules = []; try { schedules = JSON.parse(j.Schedule || '[]'); } catch(e) {}
+                const scheduleHtml = schedules.map(s => `<div class="todo-item-inline ${s.done ? 'done' : ''}"><i class="check-icon fa-solid ${s.done ? 'fa-circle-check' : 'fa-circle'}"></i><span>${new Date(s.date).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}: ${formatNum(Math.floor((s.qty/j.CutLength)*100))} Bags</span></div>`).join('');
+
+                const card = document.createElement('div');
+                card.className = 'job-card';
+                card.setAttribute('ondblclick', `copyToClipboard('${j.ID}', this)`);
+                card.innerHTML = `
+                    <div class="copy-toast">COPIED!</div>
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[10px] font-black bg-slate-900 text-white px-2 py-0.5 rounded"># ${j.JobNo}</span>
+                                <span class="status-badge ${isComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${isComplete ? 'COMPLETE' : 'PENDING'}</span>
+                            </div>
+                            <h2 onclick="viewJobImages('${(j.ImageData||"").replace(/'/g, "\\'")}', '${(j.ArtworkData||"").replace(/'/g, "\\'")}')" class="customer-name text-xl font-black text-slate-800 uppercase mb-2 hover:text-blue-600">${j.Customer}</h2>
+                            <div class="flex flex-col">
+                                <div class="text-blue-600 font-black text-base">${formatNum(j.BagsQty)} Bags</div>
+                                <div class="font-bold text-[11px] flex flex-wrap items-center mt-0.5">
+                                    <span class="dot-separator text-orange-600">${j.CutLength}cm Length</span>
+                                    ${j.Size ? `<span class="dot-separator text-slate-500">${j.Size} Size</span>` : ''}
+                                    ${j.GSM ? `<span class="dot-separator text-slate-500">${j.GSM} Gsm</span>` : ''}
+                                    ${j.Color ? `<span class="dot-separator text-slate-500">${j.Color}</span>` : ''}
+                                </div>
+                                <div class="printing-label"><i class="fa-solid fa-print"></i> <span>${printingLabels[j.Printing] || 'Plain'}</span></div>
+                                ${j.Instructions ? `<div class="instruction-text"><i class="fa-solid fa-circle-exclamation"></i> <span>${j.Instructions}</span></div>` : ''}
+                                <div class="mt-3">${scheduleHtml}</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            ${unlockedFeatures.prod ? `<button onclick="openProd('${j.ID}')" class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg"><i class="fa-solid fa-plus"></i></button>` : ''}
+                            ${unlockedFeatures.todo ? `<button onclick="openSchedule('${j.ID}')" class="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center"><i class="fa-solid fa-list-check"></i></button>` : ''}
+                            ${unlockedFeatures.edit ? `<button onclick="openEdit('${j.ID}')" class="w-10 h-8 bg-slate-100 text-slate-400 rounded-lg"><i class="fa-solid fa-pen"></i></button><button onclick="confirmDelete('${j.ID}')" class="w-10 h-8 bg-red-50 text-red-300 rounded-lg"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>
+                    <div class="mt-5 pt-4 border-t border-slate-100">
+                        <div class="flex justify-between items-end mb-1">
+                            <div class="flex flex-col"><span class="stock-label"><i class="fa-solid fa-boxes-stacked"></i> Stock: ${formatNum(j.Stock || 0)} Mtrs</span><span class="text-[9px] font-black text-slate-400 uppercase mt-0.5 flex items-center gap-1"><i class="fa-solid fa-gear spin-icon"></i> Production Progress</span></div>
+                            <span class="text-sm font-black text-blue-600">${pct}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div class="h-full ${isComplete ? 'bg-emerald-500' : 'bg-blue-600'}" style="width: ${pct}%"></div></div>
+                        <div class="flex justify-between mt-1"><span class="text-[10px] font-bold text-slate-500">${formatNum(Math.floor(done))} / ${formatNum(req)} Mtrs</span></div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+            updatePendingBadge();
+        }
+
+        function updatePendingBadge() {
+            const count = jobs.filter(j => !calculateJobStatus(j).isComplete).length;
+            const b = document.getElementById('pending-badge');
+            if (count > 0) { b.innerText = count; b.classList.remove('hidden'); } else { b.classList.add('hidden'); }
+        }
+
+        async function pullData() {
+            const icon = document.getElementById('sync-icon'); if (icon) icon.classList.add('sync-anim');
+            try { const r = await fetch(API); const d = await r.json(); if (Array.isArray(d)) { jobs = d; localStorage.setItem('job_data_v3', JSON.stringify(jobs)); renderJobs(); } } catch(e) { console.error(e); }
+            if (icon) icon.classList.remove('sync-anim');
+        }
+
+        function syncData() {
+            localStorage.setItem('job_data_v3', JSON.stringify(jobs)); renderJobs();
+            fetch(API, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'sync', data: jobs }) });
+        }
+
+        function openNewJob() {
+            document.getElementById('edit-id').value = ''; document.getElementById('job-form').reset();
+            document.getElementById('form-title').innerText = "New Job Order";
+            currentJobImageData = ""; currentJobArtworkData = "";
+            document.getElementById('view-sheet-btn').classList.add('hidden'); document.getElementById('view-artwork-btn').classList.add('hidden');
+            document.getElementById('modal-form').style.display = 'flex';
+        }
+
+        function openEdit(id) {
+            const j = jobs.find(x => x.ID == id);
+            document.getElementById('edit-id').value = id;
+            document.getElementById('job-no').value = j.JobNo; document.getElementById('customer').value = j.Customer;
+            document.getElementById('bags').value = j.BagsQty; document.getElementById('stock').value = j.Stock || '';
+            document.getElementById('cut').value = j.CutLength; document.getElementById('size').value = j.Size || '';
+            document.getElementById('gsm').value = j.GSM || ''; document.getElementById('color').value = j.Color || '';
+            document.getElementById('printing').value = j.Printing || 'plain'; document.getElementById('instructions').value = j.Instructions || '';
+            currentJobImageData = j.ImageData || ""; currentJobArtworkData = j.ArtworkData || "";
+            document.getElementById('view-sheet-btn').classList.toggle('hidden', !currentJobImageData);
+            document.getElementById('view-artwork-btn').classList.toggle('hidden', !currentJobArtworkData);
+            document.getElementById('modal-form').style.display = 'flex';
+        }
+
+        function saveJob(event) {
+            event.preventDefault();
+            const id = document.getElementById('edit-id').value || Date.now().toString();
+            let j = jobs.find(x => x.ID == id);
+            if (!j) { j = { ID: id, ProductionLogs: '[]', Schedule: '[]' }; jobs.unshift(j); }
+            j.JobNo = document.getElementById('job-no').value; j.Customer = document.getElementById('customer').value;
+            j.BagsQty = document.getElementById('bags').value; j.Stock = document.getElementById('stock').value;
+            j.CutLength = document.getElementById('cut').value; j.Size = document.getElementById('size').value;
+            j.GSM = document.getElementById('gsm').value; j.Color = document.getElementById('color').value;
+            j.Printing = document.getElementById('printing').value; j.Instructions = document.getElementById('instructions').value;
+            j.ImageData = currentJobImageData; j.ArtworkData = currentJobArtworkData;
+            syncData(); closeModals();
+        }
+
+        function openProd(id) { activeId = id; const j = jobs.find(x => x.ID == id); document.getElementById('prod-job-info').innerText = `Job #${j.JobNo}`; renderProdLogs(); document.getElementById('modal-prod').style.display = 'flex'; }
+        function renderProdLogs() {
+            const j = jobs.find(x => x.ID == activeId); const list = document.getElementById('prod-history-list');
+            let logs = JSON.parse(j.ProductionLogs || '[]');
+            const total = logs.reduce((s, l) => s + parseFloat(l.meters || 0), 0);
+            document.getElementById('prod-total-display').innerText = `Total: ${formatNum(total)} Mtrs`;
+            list.innerHTML = logs.map((l, i) => `<div class="prod-log-item"><div><p class="text-xs font-bold">${l.date}</p><p class="text-[10px] text-blue-600">${l.meters} Mtrs</p></div><button onclick="deleteLog(${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+        }
+        function saveProduction() {
+            const m = document.getElementById('mtr-val').value, d = document.getElementById('mtr-date').value; if (!m || !d) return;
+            const j = jobs.find(x => x.ID == activeId); let logs = JSON.parse(j.ProductionLogs || '[]');
+            logs.push({ meters: m, date: d }); j.ProductionLogs = JSON.stringify(logs); renderProdLogs(); syncData();
+        }
+        function deleteLog(i) { const j = jobs.find(x => x.ID == activeId); let logs = JSON.parse(j.ProductionLogs || '[]'); logs.splice(i, 1); j.ProductionLogs = JSON.stringify(logs); renderProdLogs(); syncData(); }
+        function openSchedule(id) { activeId = id; const j = jobs.find(x => x.ID == id); document.getElementById('schedule-job-no').innerText = `Job #${j.JobNo}`; renderSch(); document.getElementById('modal-schedule').style.display = 'flex'; }
+        function renderSch() {
+            const j = jobs.find(x => x.ID == activeId); let items = JSON.parse(j.Schedule || '[]');
+            document.getElementById('schedule-list').innerHTML = items.map((s, i) => `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl"><div class="${s.done ? 'opacity-50 line-through' : ''}"><p class="text-xs font-bold">${s.date}</p><p class="text-[10px] text-blue-600">${formatNum(s.qty)} Mtrs</p></div><div class="flex gap-2"><button onclick="toggleSch(${i})" class="w-8 h-8 rounded-full bg-slate-200"><i class="fa-solid fa-check"></i></button><button onclick="delSch(${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></div></div>`).join('');
+        }
+        function addScheduleItem() { const d = document.getElementById('sch-date').value, q = document.getElementById('sch-qty').value; if(!d || !q) return; const j = jobs.find(x => x.ID == activeId); let items = JSON.parse(j.Schedule || '[]'); items.push({ date: d, qty: q, done: false }); j.Schedule = JSON.stringify(items); renderSch(); syncData(); }
+        function toggleSch(i) { const j = jobs.find(x => x.ID == activeId); let items = JSON.parse(j.Schedule || '[]'); items[i].done = !items[i].done; j.Schedule = JSON.stringify(items); renderSch(); syncData(); }
+        function delSch(i) { const j = jobs.find(x => x.ID == activeId); let items = JSON.parse(j.Schedule || '[]'); items.splice(i, 1); j.Schedule = JSON.stringify(items); renderSch(); syncData(); }
+        function confirmDelete(id) { document.getElementById('modal-delete').style.display = 'flex'; document.getElementById('confirm-delete-btn').onclick = () => { jobs = jobs.filter(x => x.ID != id); syncData(); closeModals(); }; }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); activeId = null; }
+    </script>
+</body>
+</html>
+
